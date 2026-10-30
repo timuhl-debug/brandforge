@@ -1,0 +1,31 @@
+{
+  "info": {"name":"BrandForge API","description":"CRUD and authentication flow for the BrandForge Express API. Set baseUrl to http://localhost:4000. Registration requires email verification before login.","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable":[{"key":"baseUrl","value":"http://localhost:4000"},{"key":"token","value":""},{"key":"brandId","value":""},{"key":"colorId","value":""},{"key":"fontId","value":""},{"key":"assetId","value":""}],
+  "item":[
+    {"name":"Health","request":{"method":"GET","url":"{{baseUrl}}/api/health"},"event":[{"listen":"test","script":{"exec":["pm.test('API is healthy', () => pm.response.to.have.status(200));"]}}]},
+    {"name":"Auth","item":[
+      {"name":"Register (verify link printed to server terminal without SMTP)","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Demo Designer\",\n  \"email\": \"designer@example.com\",\n  \"password\": \"ChangeThisPassword123!\"\n}"},"url":"{{baseUrl}}/api/auth/register"}},
+      {"name":"Verify email","request":{"method":"GET","url":{"raw":"{{baseUrl}}/api/auth/verify?token=PASTE_RAW_TOKEN_FROM_SERVER_TERMINAL","host":["{{baseUrl}}"],"path":["api","auth","verify"],"query":[{"key":"token","value":"PASTE_RAW_TOKEN_FROM_SERVER_TERMINAL"}]}}},
+      {"name":"Login","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"designer@example.com\",\n  \"password\": \"ChangeThisPassword123!\"\n}"},"url":"{{baseUrl}}/api/auth/login"},"event":[{"listen":"test","script":{"exec":["pm.test('Login succeeds after verification', () => pm.response.to.have.status(200));","if (pm.response.code === 200) { const d = pm.response.json(); pm.collectionVariables.set('token', d.token); }"]}}]},
+      {"name":"Current user","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/me"}}
+    ]},
+    {"name":"Brands","item":[
+      {"name":"List brands","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands"}},
+      {"name":"Create brand","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Studio North\",\n  \"industry\": \"Design\",\n  \"description\": \"A considered identity for a creative studio.\",\n  \"slogan\": \"Ideas into identity\"\n}"},"url":"{{baseUrl}}/api/brands"},"event":[{"listen":"test","script":{"exec":["pm.test('Brand created', () => pm.response.to.have.status(201));","if (pm.response.code === 201) pm.collectionVariables.set('brandId', pm.response.json().brand._id);"]}}]},
+      {"name":"Get brand","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands/{{brandId}}"}},
+      {"name":"Update brand","request":{"method":"PATCH","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"slogan\": \"Designed with intention\"\n}"},"url":"{{baseUrl}}/api/brands/{{brandId}}"}},
+      {"name":"Duplicate brand","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands/{{brandId}}/duplicate"}},
+      {"name":"Delete brand (run last)","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands/{{brandId}}"}}
+    ]},
+    {"name":"Colors","item":[
+      {"name":"Create color","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Ocean\",\n  \"hex\": \"#0077B6\",\n  \"role\": \"Accent\"\n}"},"url":"{{baseUrl}}/api/brands/{{brandId}}/colors"},"event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) pm.collectionVariables.set('colorId', pm.response.json().color._id);"]}}]},
+      {"name":"Update color","request":{"method":"PATCH","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"hex\": \"#00A6FB\"\n}"},"url":"{{baseUrl}}/api/brands/{{brandId}}/colors/{{colorId}}"}},
+      {"name":"Delete color","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands/{{brandId}}/colors/{{colorId}}"}}
+    ]},
+    {"name":"Typography","item":[
+      {"name":"Create font","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"family\": \"Manrope\",\n  \"purpose\": \"Headline\",\n  \"weight\": 700\n}"},"url":"{{baseUrl}}/api/brands/{{brandId}}/fonts"},"event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) pm.collectionVariables.set('fontId', pm.response.json().font._id);"]}}]},
+      {"name":"Update font","request":{"method":"PATCH","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"weight\": 800\n}"},"url":"{{baseUrl}}/api/brands/{{brandId}}/fonts/{{fontId}}"}},
+      {"name":"Delete font","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/brands/{{brandId}}/fonts/{{fontId}}"}}
+    ]}
+  ]
+}
