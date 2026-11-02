@@ -2,7 +2,6 @@ const router = require('express').Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const User = require('../models/User');
 // - Trim account input before validating or saving it.
 const clean = (v, n=180) => String(v || '').trim().slice(0,n);
@@ -12,12 +11,34 @@ function verificationUrl(rawToken) {
   return `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${rawToken}`;
 }
 async function sendVerification(user, rawToken) {
-  const configured = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+  const apiKey = process.env.RESEND_API_KEY;
   const url = verificationUrl(rawToken);
-  if (!configured) { console.log(`\n[BrandForge development verification] ${user.email}: ${url}\n`); return false; }
-  const transporter = nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:String(process.env.SMTP_SECURE)==='true',auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASS}});
-  await transporter.sendMail({from:process.env.SMTP_FROM || process.env.SMTP_USER,to:user.email,subject:'Verify your BrandForge email',text:`Welcome to BrandForge. Verify your email by opening this link: ${url}`,html:`<div style="font-family:Arial,sans-serif;line-height:1.6;color:#20231f;max-width:560px;margin:0 auto;padding:32px"><h1 style="font-size:26px">Welcome to BrandForge</h1><p>Thanks for creating your account. Click the button below to verify your email address.</p><p style="margin:28px 0"><a href="${url}" style="display:inline-block;padding:13px 20px;background:#263d31;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:700">Verify email address</a></p><p>If the button does not work, copy and paste this link into your browser:</p><p><a href="${url}">${url}</a></p><p>This link expires in 24 hours. If you did not create a BrandForge account, you can ignore this email.</p></div>`}); return true;
+  if (!apiKey) {
+    console.log(`\n[BrandForge development verification] ${user.email}: ${url}\n`);
+    return false;
+  }
+  const from = process.env.RESEND_FROM || 'BrandForge <onboarding@resend.dev>';
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from,
+      to: [user.email],
+      subject: 'Verify your BrandForge email',
+      text:`Welcome to BrandForge. Verify your email by opening this link: ${url}`,
+      html:`<div style="font-family:Arial,sans-serif;line-height:1.6;color:#20231f;max-width:560px;margin:0 auto;padding:32px"><h1 style="font-size:26px">Welcome to BrandForge</h1><p>Thanks for creating your account. Click the button below to verify your email address.</p><p style="margin:28px 0"><a href="${url}" style="display:inline-block;padding:13px 20px;background:#263d31;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:700">Verify email address</a></p><p>If the button does not work, copy and paste this link into your browser:</p><p><a href="${url}">${url}</a></p><p>This link expires in 24 hours. If you did not create a BrandForge account, you can ignore this email.</p></div>`
+    })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.message || result.error || `Resend API request failed with status ${response.status}`);
+  }
+  return true;
 }
+
 router.post('/register', async (req,res,next) => { try {
   const name=clean(req.body.name,80), email=clean(req.body.email).toLowerCase(), password=String(req.body.password||'');
   if(!name || !/^\S+@\S+\.\S+$/.test(email) || password.length<12) return res.status(400).json({message:'Enter your name, a valid email, and a password with at least 12 characters.'});
@@ -40,7 +61,7 @@ router.post('/resend-verification', async (req,res,next) => { try {
   user.verificationExpiresAt=new Date(Date.now()+24*60*60*1000);
   await user.save();
   try { const emailSent=await sendVerification(user,raw); const directVerificationUrl=!emailSent&&process.env.NODE_ENV!=='production'?verificationUrl(raw):undefined; return res.json({message:emailSent?'A new verification email has been sent. Check your inbox and spam folder.':process.env.NODE_ENV==='production'?'Email could not be sent right now. Please try again later.':'Use the verification link below, or find it in the server terminal.',emailSent,...(directVerificationUrl?{verificationUrl:directVerificationUrl}:{})}); }
-  catch(e){console.error('Resend verification email failed:',e.message);if(process.env.NODE_ENV!=='production'){const url=verificationUrl(raw);console.log(`[BrandForge development verification] ${email}: ${url}`);return res.json({message:'Email could not be sent right now. Use the development verification link below.',emailSent:false,verificationUrl:url});}return res.json({message:'Email could not be sent right now. Check SMTP settings and try again.'});}
+  catch(e){console.error('Resend verification email failed:',e.message);if(process.env.NODE_ENV!=='production'){const url=verificationUrl(raw);console.log(`[BrandForge development verification] ${email}: ${url}`);return res.json({message:'Email could not be sent right now. Use the development verification link below.',emailSent:false,verificationUrl:url});}return res.json({message:'Email could not be sent right now. Check your Resend settings and try again.'});}
 } catch(e){next(e)} });
 
 router.get('/verify', async(req,res,next)=>{try{
