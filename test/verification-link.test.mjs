@@ -7,8 +7,8 @@ const authPage = await readFile(new URL('../client/src/pages/AuthPage.jsx', impo
 const app = await readFile(new URL('../client/src/App.jsx', import.meta.url), 'utf8')
 
 test('verification email contains a clickable button and fallback link', () => {
-  assert.match(authRoute, /html:`[\s\S]*<a href=\"\$\{url\}\"/)
-  assert.match(authRoute, /text:`Welcome to BrandForge[\s\S]*\$\{url\}/)
+  assert.match(authRoute, /html:\s*`[\s\S]*<a href=\"\$\{url\}\"/)
+  assert.match(authRoute, /text:\s*`Welcome to BrandForge[\s\S]*\$\{url\}/)
 })
 
 test('local registration displays a clickable verification link', () => {
