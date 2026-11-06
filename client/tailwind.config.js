@@ -1,1 +1,23 @@
-export default { content:['./index.html','./src/**/*.{js,jsx}'], theme:{extend:{fontFamily:{sans:['DM Sans','sans-serif'],display:['Manrope','sans-serif']},colors:{ink:'#171820',paper:'#f7f7f4',violet:'#6c5ce7'}}},plugins:[] };
+export default {
+  content: {
+    relative: true,
+    files: [
+      './index.html',
+      './src/**/*.{js,jsx}',
+    ],
+  },
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['DM Sans', 'sans-serif'],
+        display: ['Manrope', 'sans-serif'],
+      },
+      colors: {
+        ink: '#171820',
+        paper: '#f7f7f4',
+        violet: '#6c5ce7',
+      },
+    },
+  },
+  plugins: [],
+};
